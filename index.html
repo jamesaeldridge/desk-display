@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Desk Display Controller</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #121212; color: #eee; margin: 0; padding: 24px 12px; }
+    .container { max-width: 480px; margin: auto; }
+    .card { background: #1e1e1e; border-radius: 14px; padding: 20px; margin-bottom: 16px; border: 1px solid #2d2d2d; box-shadow: 0 4px 16px rgba(0,0,0,0.5); }
+    h2, h3 { margin-top: 0; color: #fff; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .stat { background: #262626; border-radius: 10px; padding: 14px; text-align: center; }
+    .stat .val { font-size: 26px; font-weight: 700; color: #007aff; margin-top: 6px; }
+    .stat .lbl { font-size: 13px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
+    input[type=text] { width: 100%; box-sizing: border-box; background: #262626; border: 1px solid #3d3d3d; border-radius: 8px; color: #fff; padding: 12px; font-size: 16px; margin: 8px 0 12px; }
+    button { width: 100%; background: #007aff; color: #fff; border: none; border-radius: 8px; padding: 12px; font-size: 16px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+    button:active { background: #0056b3; }
+    .mic-btn { background: #34c759; margin-top: 6px; font-size: 18px; padding: 16px; border-radius: 10px; display: flex; align-items: center; justify-content: center; gap: 10px; }
+    .mic-btn.recording { background: #ff3b30; animation: pulse 1.2s infinite; }
+    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+    #voiceAck, #msgAck { margin-top: 10px; font-size: 14px; color: #30d158; font-weight: 500; text-align: center; min-height: 20px; }
+    .ip-config { font-size: 12px; color: #888; margin-top: 12px; }
+    .ip-config input { padding: 6px; background: #1a1a1a; border: 1px solid #333; color: #aaa; border-radius: 4px; width: 130px; font-size: 12px; margin: 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <h2>Desk Display Monitor</h2>
+      <div class="grid">
+        <div class="stat"><div class="lbl">Time</div><div class="val" id="timeVal">--:--</div></div>
+        <div class="stat"><div class="lbl">Date</div><div class="val" id="dateVal">--/--</div></div>
+        <div class="stat"><div class="lbl">Temperature</div><div class="val" id="tempVal">-- &deg;F</div></div>
+        <div class="stat"><div class="lbl">Pressure</div><div class="val" id="pressVal">-- hPa</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Voice to Screen</h3>
+      <button id="voiceBtn" class="mic-btn" onclick="toggleVoice()">
+        <span id="micIcon">&#127908;</span> <span id="voiceBtnText">Tap to Speak</span>
+      </button>
+      <div id="voiceAck"></div>
+    </div>
+
+    <div class="card">
+      <h3>Send Text Message</h3>
+      <input type="text" id="msgBox" maxlength="32" placeholder="Type a message (e.g. DINNER TIME)">
+      <button onclick="sendMsg()">Push to Screen</button>
+      <div id="msgAck"></div>
+    </div>
+
+    <div class="ip-config">
+      ESP32 IP: <input type="text" id="espIp" value="192.168.0.122" onchange="localStorage.setItem('espIp', this.value)">
+    </div>
+  </div>
+
+  <script>
+    if (localStorage.getItem('espIp')) {
+      document.getElementById('espIp').value = localStorage.getItem('espIp');
+    }
+
+    function getBaseUrl() {
+      const ip = document.getElementById('espIp').value.trim();
+      return 'http://' + ip;
+    }
+
+    async function updateData() {
+      try {
+        const res = await fetch(getBaseUrl() + '/api/data');
+        const d = await res.json();
+        document.getElementById('timeVal').innerText = d.time;
+        document.getElementById('dateVal').innerText = d.date;
+        document.getElementById('tempVal').innerHTML = d.tempF + '&deg;F';
+        document.getElementById('pressVal').innerText = d.pressure + ' hPa';
+      } catch (e) {}
+    }
+    setInterval(updateData, 2000);
+    updateData();
+
+    async function sendMsg() {
+      const txt = document.getElementById('msgBox').value.trim();
+      if (!txt) return;
+      const ack = document.getElementById('msgAck');
+      ack.innerText = "Sending...";
+      try {
+        await fetch(getBaseUrl() + '/api/message', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: 'text=' + encodeURIComponent(txt)
+        });
+        ack.innerText = "Sent to screen!";
+      } catch (err) {
+        ack.innerText = "Error: Check connection to ESP32.";
+      }
+      setTimeout(() => ack.innerText = "", 4000);
+    }
+
+    let recognition = null;
+    let isRecording = false;
+
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognition = new SpeechRec();
+      recognition.continuous = false;
+      recognition.interimResults = false;
+      recognition.lang = 'en-US';
+
+      recognition.onstart = function() {
+        isRecording = true;
+        document.getElementById('voiceBtn').classList.add('recording');
+        document.getElementById('voiceBtnText').innerText = "Listening... speak now";
+        document.getElementById('voiceAck').innerText = "";
+      };
+
+      recognition.onresult = async function(event) {
+        const transcript = event.results[0][0].transcript;
+        const voiceAck = document.getElementById('voiceAck');
+        voiceAck.innerText = 'Heard: "' + transcript + '" - Sending...';
+
+        try {
+          await fetch(getBaseUrl() + '/api/voice', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'text=' + encodeURIComponent(transcript)
+          });
+          voiceAck.innerText = 'Sent: "' + transcript.toUpperCase() + '"';
+        } catch (err) {
+          voiceAck.innerText = "Failed sending voice message to screen.";
+        }
+        setTimeout(() => voiceAck.innerText = "", 5000);
+      };
+
+      recognition.onerror = function(event) {
+        document.getElementById('voiceAck').innerText = "Mic error: " + event.error;
+      };
+
+      recognition.onend = function() {
+        isRecording = false;
+        document.getElementById('voiceBtn').classList.remove('recording');
+        document.getElementById('voiceBtnText').innerText = "Tap to Speak";
+      };
+    }
+
+    function toggleVoice() {
+      if (!recognition) {
+        alert("Speech Recognition not supported in this browser. Please use Chrome.");
+        return;
+      }
+      if (isRecording) {
+        recognition.stop();
+      } else {
+        recognition.start();
+      }
+    }
+  </script>
+</body>
+</html>
