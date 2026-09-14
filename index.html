@@ -11,7 +11,7 @@
     h2, h3 { margin-top: 0; color: #fff; }
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .stat { background: #262626; border-radius: 10px; padding: 12px; text-align: center; }
-    .stat .val { font-size: 24px; font-weight: 700; color: #007aff; margin-top: 4px; }
+    .stat .val { font-size: 24px; font-weight: 700; color: #007aff; margin-top: 4px; word-break: break-word; }
     .stat .lbl { font-size: 12px; color: #888; text-transform: uppercase; }
     input[type=text] { width: 100%; box-sizing: border-box; background: #262626; border: 1px solid #3d3d3d; border-radius: 8px; color: #fff; padding: 12px; font-size: 16px; margin: 8px 0 10px; }
     button { width: 100%; background: #007aff; color: #fff; border: none; border-radius: 8px; padding: 12px; font-size: 16px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
@@ -40,6 +40,10 @@
         <div class="stat"><div class="lbl">Date</div><div class="val" id="dateVal">--/--</div></div>
         <div class="stat"><div class="lbl">Temperature</div><div class="val" id="tempVal">-- &deg;F</div></div>
         <div class="stat"><div class="lbl">Pressure</div><div class="val" id="pressVal">-- hPa</div></div>
+        <div class="stat" style="grid-column: span 2;">
+          <div class="lbl">Last Screen Message</div>
+          <div class="val" id="lastMsgVal" style="font-size: 18px; color: #ff9f0a;">--</div>
+        </div>
       </div>
     </div>
 
@@ -93,6 +97,10 @@
         document.getElementById('dateVal').innerText = d.date;
         document.getElementById('tempVal').innerHTML = d.tempF + '&deg;F';
         document.getElementById('pressVal').innerText = d.pressure + ' hPa';
+
+        if (d.lastMessage) {
+          document.getElementById('lastMsgVal').innerText = d.lastMessage;
+        }
 
         if (d.highScores) {
           let html = '';
