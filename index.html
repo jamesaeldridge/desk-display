@@ -5,20 +5,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Desk Display Controller</title>
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #121212; color: #eee; margin: 0; padding: 24px 12px; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #121212; color: #eee; margin: 0; padding: 20px 12px; }
     .container { max-width: 480px; margin: auto; }
-    .card { background: #1e1e1e; border-radius: 14px; padding: 20px; margin-bottom: 16px; border: 1px solid #2d2d2d; box-shadow: 0 4px 16px rgba(0,0,0,0.5); }
+    .card { background: #1e1e1e; border-radius: 14px; padding: 18px; margin-bottom: 16px; border: 1px solid #2d2d2d; box-shadow: 0 4px 16px rgba(0,0,0,0.5); }
     h2, h3 { margin-top: 0; color: #fff; }
-    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .stat { background: #262626; border-radius: 10px; padding: 14px; text-align: center; }
-    .stat .val { font-size: 26px; font-weight: 700; color: #007aff; margin-top: 6px; }
-    .stat .lbl { font-size: 13px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
-    input[type=text] { width: 100%; box-sizing: border-box; background: #262626; border: 1px solid #3d3d3d; border-radius: 8px; color: #fff; padding: 12px; font-size: 16px; margin: 8px 0 12px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .stat { background: #262626; border-radius: 10px; padding: 12px; text-align: center; }
+    .stat .val { font-size: 24px; font-weight: 700; color: #007aff; margin-top: 4px; }
+    .stat .lbl { font-size: 12px; color: #888; text-transform: uppercase; }
+    input[type=text] { width: 100%; box-sizing: border-box; background: #262626; border: 1px solid #3d3d3d; border-radius: 8px; color: #fff; padding: 12px; font-size: 16px; margin: 8px 0 10px; }
     button { width: 100%; background: #007aff; color: #fff; border: none; border-radius: 8px; padding: 12px; font-size: 16px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
     button:active { background: #0056b3; }
-    .mic-btn { background: #34c759; margin-top: 6px; font-size: 18px; padding: 16px; border-radius: 10px; display: flex; align-items: center; justify-content: center; gap: 10px; }
+    .mic-btn { background: #34c759; margin-top: 6px; font-size: 17px; padding: 14px; border-radius: 10px; display: flex; align-items: center; justify-content: center; gap: 10px; }
     .mic-btn.recording { background: #ff3b30; animation: pulse 1.2s infinite; }
     @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+    .score-table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    .score-table th, .score-table td { padding: 10px 12px; text-align: left; }
+    .score-table th { color: #888; border-bottom: 1px solid #333; font-size: 13px; text-transform: uppercase; }
+    .score-table td { border-bottom: 1px solid #282828; font-size: 16px; }
+    .score-table td.rank { font-weight: 700; color: #ff9f0a; width: 40px; }
+    .score-table td.initials { font-weight: 600; letter-spacing: 2px; }
+    .score-table td.score { text-align: right; font-weight: 700; color: #30d158; }
     #voiceAck, #msgAck { margin-top: 10px; font-size: 14px; color: #30d158; font-weight: 500; text-align: center; min-height: 20px; }
     .ip-config { font-size: 12px; color: #888; margin-top: 12px; }
     .ip-config input { padding: 6px; background: #1a1a1a; border: 1px solid #333; color: #aaa; border-radius: 4px; width: 130px; font-size: 12px; margin: 0; }
@@ -34,6 +41,18 @@
         <div class="stat"><div class="lbl">Temperature</div><div class="val" id="tempVal">-- &deg;F</div></div>
         <div class="stat"><div class="lbl">Pressure</div><div class="val" id="pressVal">-- hPa</div></div>
       </div>
+    </div>
+
+    <div class="card">
+      <h3>Flappy Birds Top 3 Scores</h3>
+      <table class="score-table">
+        <thead>
+          <tr><th>#</th><th>Player</th><th style="text-align:right;">Score</th></tr>
+        </thead>
+        <tbody id="scoresBody">
+          <tr><td colspan="3" style="text-align:center; color:#777;">Loading scores...</td></tr>
+        </tbody>
+      </table>
     </div>
 
     <div class="card">
@@ -74,6 +93,14 @@
         document.getElementById('dateVal').innerText = d.date;
         document.getElementById('tempVal').innerHTML = d.tempF + '&deg;F';
         document.getElementById('pressVal').innerText = d.pressure + ' hPa';
+
+        if (d.highScores) {
+          let html = '';
+          d.highScores.forEach((s, idx) => {
+            html += `<tr><td class="rank">#${idx+1}</td><td class="initials">${s.initials}</td><td class="score">${s.score}</td></tr>`;
+          });
+          document.getElementById('scoresBody').innerHTML = html;
+        }
       } catch (e) {}
     }
     setInterval(updateData, 2000);
